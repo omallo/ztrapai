@@ -9,14 +9,6 @@ class MultiTrainSaveModelCallback(SaveModelCallback):
         old_best = self.best if hasattr(self, 'best') else None
         super().on_train_begin(**kwargs)
         self.best = old_best or self.best
-        self.best_last_cycle = float('inf') if self.operator == np.less else -float('inf')
-
-    def on_epoch_end(self, epoch, **kwargs):
-        super().on_epoch_end(epoch, **kwargs)
-
-        current = self.get_monitor_value()
-        if self.operator(current, self.best_last_cycle):
-            self.best_last_cycle = current
 
 
 @dataclass
@@ -29,6 +21,19 @@ class MultiTrainEarlyStoppingCallback(EarlyStoppingCallback):
     def on_epoch_end(self, epoch, **kwargs):
         self.early_stopped = super().on_epoch_end(epoch, **kwargs)
         return self.early_stopped
+
+
+@dataclass
+class MetricTrackerCallback(TrackerCallback):
+    def on_train_begin(self, **kwargs):
+        old_best = self.best if hasattr(self, 'best') else None
+        super().on_train_begin(**kwargs)
+        self.best = old_best or self.best
+
+    def on_epoch_end(self, epoch, **kwargs):
+        current = self.get_monitor_value()
+        if self.operator(current, self.best):
+            self.best = current
 
 
 class FocalLoss(nn.Module):
@@ -118,19 +123,19 @@ def bootstrap_training(model_name, model_factory):
     learn.freeze()
     early_stopping.patience = 3
     learn.fit(100, lr=freeze_lr)
-    log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
+    log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
     learn.unfreeze()
     early_stopping.patience = 3
     learn.fit(100, lr=slice(unfreeze_lr))
-    log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
+    log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
     cycle_len = 10
     early_stopping.patience = cycle_len - 1
     early_stopping.early_stopped = False
     while not early_stopping.early_stopped:
         learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
-        log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
+        log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
     return model_saving.best
 
@@ -157,6 +162,7 @@ def train(args):
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
+    best_score_tracker = MetricTrackerCallback(learn, monitor='accuracy', mode='max')
 
     if best_bootstraping_score:
         model_saving.best = best_bootstraping_score
@@ -182,11 +188,11 @@ def train(args):
         learn.unfreeze()
         while not early_stopping.early_stopped:
             learn.fit_one_cycle(cycle_len, max_lr=lr)
-            log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
+            log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
-    best_score = model_saving.best_last_cycle
+    best_score = best_score_tracker.best
     if isinstance(best_score, Tensor):
         best_score = best_score.item()
     if model_saving.operator != np.less:
