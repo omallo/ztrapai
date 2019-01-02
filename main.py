@@ -127,16 +127,19 @@ def bootstrap_training(model_name, model_factory):
     freeze_lr = 1e-2
     unfreeze_lr = 1e-3
 
+    log('bootstrap training with freezed model')
     learn.freeze()
     early_stopping.patience = 3
     learn.fit(100, lr=freeze_lr)
     log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
+    log('bootstrap training with unfreezed model and differential learning rates')
     learn.unfreeze()
     early_stopping.patience = 3
     learn.fit(100, lr=slice(unfreeze_lr))
     log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
+    log('bootstrap training with unfreezed model and one-cycle learning rate scheduling')
     cycle_len = 10
     early_stopping.patience = cycle_len - 1
     early_stopping.early_stopped = False
