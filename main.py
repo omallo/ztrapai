@@ -83,8 +83,8 @@ def create_data(batch_size):
     )
 
 
-def create_learner(data, model_name, models_base_path, dropout, loss_func):
-    model_config = get_model_config(model_name)
+def create_learner(data, model_type, models_base_path, dropout, loss_func):
+    model_config = get_model_config(model_type)
     return create_cnn(
         data,
         model_config.factory,
@@ -97,17 +97,17 @@ def create_learner(data, model_name, models_base_path, dropout, loss_func):
     )
 
 
-def get_model_config(model_name):
-    if model_name == 'resnet34':
+def get_model_config(model_type):
+    if model_type == 'resnet34':
         return ModelConfig(models.resnet34, resnet_split, True)
-    elif model_name == 'resnet50':
+    elif model_type == 'resnet50':
         return ModelConfig(models.resnet50, resnet_split, True)
-    elif model_name == 'resnet34_small':
+    elif model_type == 'resnet34_small':
         return ModelConfig(lambda pretrained: ResNet34(), None, False)
-    elif model_name == 'preact_resnet34':
+    elif model_type == 'preact_resnet34':
         return ModelConfig(lambda pretrained: PreActResNet34(), None, False)
     else:
-        raise Exception(f'Unsupported model type "{model_name}"')
+        raise Exception(f'Unsupported model type "{model_type}"')
 
 
 def get_loss_func(loss_config):
@@ -119,15 +119,15 @@ def get_loss_func(loss_config):
         raise Exception(f'Unsupported loss type "{loss_config["type"]}"')
 
 
-def bootstrap_training(model_name):
-    log(f'bootstraping the training for model "{model_name}"\n')
+def bootstrap_training(model_type):
+    log(f'bootstraping the training for model "{model_type}"\n')
 
     models_base_path = Path('/artifacts')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, model_name, models_base_path, 0.2, nn.CrossEntropyLoss())
+    learn = create_learner(data, model_type, models_base_path, 0.2, nn.CrossEntropyLoss())
 
-    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
+    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
 
     learn.callbacks = [model_saving, early_stopping]
@@ -135,7 +135,7 @@ def bootstrap_training(model_name):
     freeze_lr = 1e-2
     unfreeze_lr = 1e-3
 
-    model_config = get_model_config(model_name)
+    model_config = get_model_config(model_type)
 
     if model_config.pretrained:
         log('bootstrap training with freezed model')
@@ -162,7 +162,7 @@ def bootstrap_training(model_name):
 
 
 def train(space):
-    model_name = space['model']
+    model_type = space['model']
     dropout = space['dropout']
     loss_config = space['loss']
     lr_scheduler_config = space['lr_scheduler']
@@ -172,15 +172,15 @@ def train(space):
     models_base_path = Path('/artifacts')
 
     best_bootstraping_score = None
-    if not os.path.isfile(f'{models_base_path}/models/{model_name}.pth'):
-        best_bootstraping_score = bootstrap_training(model_name)
+    if not os.path.isfile(f'{models_base_path}/models/{model_type}.pth'):
+        best_bootstraping_score = bootstrap_training(model_type)
 
     log(f'\ntraining with hyper parameters: {space}\n')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, model_name, models_base_path, dropout, loss_func)
+    learn = create_learner(data, model_type, models_base_path, dropout, loss_func)
 
-    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
+    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
     best_score_tracker = MultiTrainMetricTrackerCallback(learn, monitor='accuracy', mode='max')
 
@@ -199,7 +199,7 @@ def train(space):
 
     learn.callbacks = [model_saving, early_stopping, best_score_tracker]
 
-    learn.load(model_name)
+    learn.load(model_type)
 
     if lr_scheduler_config['type'] == 'one_cycle':
         lr = 1e-3
