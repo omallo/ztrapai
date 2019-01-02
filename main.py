@@ -140,11 +140,11 @@ def bootstrap_training(model_name, model_factory):
     return model_saving.best
 
 
-def train(args):
-    model_name = args[0]
-    dropout = args[1]
-    loss_config = args[2]
-    lr_scheduler_config = args[3]
+def train(space):
+    model_name = space['model']
+    dropout = space['dropout']
+    loss_config = space['loss']
+    lr_scheduler_config = space['lr_scheduler']
 
     model_factory = get_model_factory(model_name)
     loss_func = get_loss_func(loss_config)
@@ -155,7 +155,7 @@ def train(args):
     if not os.path.isfile(f'{models_base_path}/models/{model_name}.pth'):
         best_bootstraping_score = bootstrap_training(model_name, model_factory)
 
-    log(f'\ntraining with hyper parameters: {args}\n')
+    log(f'\ntraining with hyper parameters: {space}\n')
 
     data = create_data(batch_size=64)
     learn = create_learner(data, model_factory, resnet_split, models_base_path, dropout, loss_func)
@@ -209,10 +209,10 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
     log('restoring models')
     shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
-hyper_space = [
-    hp.choice('model', ('resnet34',)),
-    hp.choice('dropout', (None, 0.2, 0.5, 0.8)),
-    hp.choice('loss', (
+hyper_space = {
+    'model': hp.choice('model', ('resnet34',)),
+    'dropout': hp.choice('dropout', (None, 0.2, 0.5, 0.8)),
+    'loss': hp.choice('loss', (
         {
             'type': 'cce'
         },
@@ -221,13 +221,13 @@ hyper_space = [
             'gamma': hp.choice('focal_loss_gamma', (1.0, 2.0, 5.0))
         }
     )),
-    hp.choice('lr_scheduler', (
+    'lr_scheduler': hp.choice('lr_scheduler', (
         {
             'type': 'one_cycle',
             'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10, 20))
         },
     ))
-]
+}
 
 trials = Trials()
 if os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
@@ -246,6 +246,8 @@ best = fmin(
 
 with open('/artifacts/trials.p', 'wb') as trials_file:
     pickle.dump(trials, trials_file)
+
+# TODO: check out space_eval() from hyperopt
 
 log(f'best hyperparameter configuration: {best}')
 log(f'best score: {-min(trials.losses())}')
