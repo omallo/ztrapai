@@ -224,7 +224,7 @@ hyper_space = {
     'lr_scheduler': hp.choice('lr_scheduler', (
         {
             'type': 'one_cycle',
-            'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10, 20))
+            'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10))
         },
     ))
 }
