@@ -75,7 +75,7 @@ def bootstrap_training():
     models_base_path = Path('/artifacts')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, models.resnet34, resnet_split, models_base_path, nn.CrossEntropyLoss())
+    learn = create_learner(data, models.resnet34, resnet_split, models_base_path, FocalLoss(gamma=2.0))
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
