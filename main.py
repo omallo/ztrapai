@@ -1,6 +1,6 @@
 from fastai.callbacks import *
 from fastai.vision import *
-from hyperopt import fmin, tpe, hp, Trials
+from hyperopt import fmin, tpe, hp, space_eval, Trials
 
 from preact_resnet import *
 from resnet import *
@@ -267,7 +267,5 @@ best = fmin(
 with open('/artifacts/trials.p', 'wb') as trials_file:
     pickle.dump(trials, trials_file)
 
-# TODO: check out space_eval() from hyperopt
-
-log(f'best hyper parameter configuration: {best}')
+log(f'best hyper parameter configuration: {space_eval(hyper_space, best)}')
 log(f'best score: {-min(trials.losses())}')
