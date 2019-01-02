@@ -2,6 +2,8 @@ from fastai.callbacks import *
 from fastai.vision import *
 from hyperopt import fmin, tpe, hp, Trials
 
+from .resnet import *
+
 
 @dataclass
 class MultiTrainSaveModelCallback(SaveModelCallback):
@@ -91,6 +93,8 @@ def get_model_factory(model_name):
         return models.resnet34
     elif model_name == 'resnet50':
         return models.resnet50
+    elif model_name == 'resnet34_small':
+        return ResNet34()
     else:
         raise Exception(f'Unsupported model type "{model_name}"')
 
@@ -210,7 +214,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
     shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
 hyper_space = {
-    'model': hp.choice('model', ('resnet34',)),
+    'model': hp.choice('model', ('resnet34', 'resnet34_small')),
     'dropout': hp.choice('dropout', (0.1, 0.2, 0.5, 0.8)),
     'loss': hp.choice('loss', (
         {
@@ -249,5 +253,5 @@ with open('/artifacts/trials.p', 'wb') as trials_file:
 
 # TODO: check out space_eval() from hyperopt
 
-log(f'best hyperparameter configuration: {best}')
+log(f'best hyper parameter configuration: {best}')
 log(f'best score: {-min(trials.losses())}')
