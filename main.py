@@ -39,6 +39,13 @@ class MultiTrainMetricTrackerCallback(TrackerCallback):
             self.best = current
 
 
+class ModelConfig:
+    def __init__(self, factory, split_func, pretrained):
+        self.factory = factory
+        self.split_func = split_func
+        self.pretrained = pretrained
+
+
 class FocalLoss(nn.Module):
     def __init__(self, gamma):
         super().__init__()
@@ -76,28 +83,29 @@ def create_data(batch_size):
     )
 
 
-def create_learner(data, model_factory_func, model_split_func, models_base_path, dropout, loss_func):
+def create_learner(data, model_name, models_base_path, dropout, loss_func):
+    model_config = get_model_config(model_name)
     return create_cnn(
         data,
-        model_factory_func,
-        pretrained=True,
+        model_config.factory,
+        pretrained=model_config.pretrained,
         ps=dropout,
-        split_on=model_split_func,
+        split_on=model_config.split_func,
         metrics=[accuracy],
         path=models_base_path,
         loss_func=loss_func
     )
 
 
-def get_model_factory(model_name):
+def get_model_config(model_name):
     if model_name == 'resnet34':
-        return models.resnet34
+        return ModelConfig(models.resnet34, resnet_split, True)
     elif model_name == 'resnet50':
-        return models.resnet50
+        return ModelConfig(models.resnet50, resnet_split, True)
     elif model_name == 'resnet34_small':
-        return lambda pretrained: ResNet34()
+        return ModelConfig(lambda pretrained: ResNet34(), None, False)
     elif model_name == 'preact_resnet34':
-        return lambda pretrained: PreActResNet34()
+        return ModelConfig(lambda pretrained: PreActResNet34(), None, False)
     else:
         raise Exception(f'Unsupported model type "{model_name}"')
 
@@ -111,13 +119,13 @@ def get_loss_func(loss_config):
         raise Exception(f'Unsupported loss type "{loss_config["type"]}"')
 
 
-def bootstrap_training(model_name, model_factory):
+def bootstrap_training(model_name):
     log(f'bootstraping the training for model "{model_name}"\n')
 
     models_base_path = Path('/artifacts')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, model_factory, resnet_split, models_base_path, 0.2, nn.CrossEntropyLoss())
+    learn = create_learner(data, model_name, models_base_path, 0.2, nn.CrossEntropyLoss())
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
@@ -127,11 +135,14 @@ def bootstrap_training(model_name, model_factory):
     freeze_lr = 1e-2
     unfreeze_lr = 1e-3
 
-    log('bootstrap training with freezed model')
-    learn.freeze()
-    early_stopping.patience = 3
-    learn.fit(100, lr=freeze_lr)
-    log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
+    model_config = get_model_config(model_name)
+
+    if model_config.pretrained:
+        log('bootstrap training with freezed model')
+        learn.freeze()
+        early_stopping.patience = 3
+        learn.fit(100, lr=freeze_lr)
+        log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
     log('bootstrap training with unfreezed model and differential learning rates')
     learn.unfreeze()
@@ -156,19 +167,18 @@ def train(space):
     loss_config = space['loss']
     lr_scheduler_config = space['lr_scheduler']
 
-    model_factory = get_model_factory(model_name)
     loss_func = get_loss_func(loss_config)
 
     models_base_path = Path('/artifacts')
 
     best_bootstraping_score = None
     if not os.path.isfile(f'{models_base_path}/models/{model_name}.pth'):
-        best_bootstraping_score = bootstrap_training(model_name, model_factory)
+        best_bootstraping_score = bootstrap_training(model_name)
 
     log(f'\ntraining with hyper parameters: {space}\n')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, model_factory, resnet_split, models_base_path, dropout, loss_func)
+    learn = create_learner(data, model_name, models_base_path, dropout, loss_func)
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
