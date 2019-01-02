@@ -109,19 +109,21 @@ def bootstrap_training(model_name, model_factory):
     learn.freeze()
     early_stopping.patience = 3
     learn.fit(100, lr=freeze_lr)
-    log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
+    log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
 
     learn.unfreeze()
     early_stopping.patience = 3
     learn.fit(100, lr=slice(unfreeze_lr))
-    log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
+    log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
 
     cycle_len = 10
     early_stopping.patience = cycle_len - 1
     early_stopping.early_stopped = False
     while not early_stopping.early_stopped:
         learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
-        log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
+        log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
+
+    return model_saving.best
 
 
 def train(args):
@@ -134,8 +136,9 @@ def train(args):
 
     models_base_path = Path('/artifacts')
 
+    best_bootstraping_score = None
     if not os.path.isfile(f'{models_base_path}/models/{model_name}.pth'):
-        bootstrap_training(model_name, model_factory)
+        best_bootstraping_score = bootstrap_training(model_name, model_factory)
 
     log(f'\ntraining with hyper parameters: {args}\n')
 
@@ -145,22 +148,27 @@ def train(args):
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
 
+    if best_bootstraping_score:
+        model_saving.best = best_bootstraping_score
+        early_stopping.best = best_bootstraping_score
+
     learn.callbacks = [model_saving, early_stopping]
 
     learn.load(model_name)
 
     if lr_scheduler_config['type'] == 'one_cycle':
-        unfreeze_lr = 1e-3
+        lr = 1e-3
         cycle_len = lr_scheduler_config['cycle_len']
         early_stopping.patience = cycle_len - 1
         early_stopping.early_stopped = False
+        learn.unfreeze()
         while not early_stopping.early_stopped:
-            learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
-            log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
+            learn.fit_one_cycle(cycle_len, max_lr=lr)
+            log(f'--> best {model_saving.monitor}: {model_saving.best:.6f}\n')
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
-    return -early_stopping.best.item()
+    return model_saving.best.item() if model_saving.mode == 'min' else -model_saving.best.item()
 
 
 shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
@@ -179,7 +187,7 @@ hyper_space = [
     hp.choice('lr_scheduler', (
         {
             'type': 'one_cycle',
-            'cycle_len': hp.choice('one_cycle_scheduler_cycle_len', (5, 10, 15, 20))
+            'cycle_len': hp.choice('one_cycle_scheduler_cycle_len', (5, 10, 20))
         },
     ))
 ]
