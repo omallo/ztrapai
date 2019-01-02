@@ -1,5 +1,3 @@
-from pprint import pprint
-
 from fastai.callbacks import *
 from fastai.vision import *
 from hyperopt import fmin, tpe, hp, Trials
@@ -42,6 +40,10 @@ class FocalLoss(nn.Module):
         return loss.mean()
 
 
+def log(*args):
+    print(*args, flush=True)
+
+
 def resnet_split(model):
     return (model[0][6], model[1])
 
@@ -70,7 +72,18 @@ def create_learner(data, model_factory_func, model_split_func, models_base_path,
     )
 
 
+def get_loss_func(loss_config):
+    if loss_config['type'] == 'cce':
+        return nn.CrossEntropyLoss()
+    elif loss_config['type'] == 'focal':
+        return FocalLoss(gamma=loss_config['gamma'])
+    else:
+        raise Exception(f'Unsupported loss type "{loss_config["type"]}"')
+
+
 def bootstrap_training():
+    log('bootstraping the training\n')
+
     model_name = 'resnet34'
     models_base_path = Path('/artifacts')
 
@@ -88,31 +101,22 @@ def bootstrap_training():
     learn.freeze()
     early_stopping.patience = 3
     learn.fit(100, lr=freeze_lr)
+    log(f'\nbest score: {early_stopping.best}\n')
 
     learn.unfreeze()
     early_stopping.patience = 3
     learn.fit(100, lr=slice(unfreeze_lr))
+    log(f'\nbest score: {early_stopping.best}\n')
 
     cycle_len = 10
     early_stopping.patience = cycle_len - 1
     early_stopping.early_stopped = False
     while not early_stopping.early_stopped:
         learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
-
-
-def get_loss_func(loss_config):
-    if loss_config['type'] == 'cce':
-        return nn.CrossEntropyLoss()
-    elif loss_config['type'] == 'focal':
-        return FocalLoss(gamma=loss_config['gamma'])
-    else:
-        raise Exception(f'Unsupported loss type "{loss_config["type"]}"')
+        log(f'\nbest score: {early_stopping.best}\n')
 
 
 def train(args):
-    pprint(args)
-    print(flush=True)
-
     model_name = 'resnet34'
     loss_config = args[0]
 
@@ -122,6 +126,8 @@ def train(args):
 
     if not os.path.isfile(f'{models_base_path}/models/{model_name}.pth'):
         bootstrap_training()
+
+    log(f'\ntraining with hyper parameters: {args}\n')
 
     data = create_data(batch_size=64)
     learn = create_learner(data, models.resnet34, resnet_split, models_base_path, loss_func)
@@ -139,6 +145,7 @@ def train(args):
     early_stopping.early_stopped = False
     while not early_stopping.early_stopped:
         learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
+        log(f'\nbest score: {early_stopping.best}\n')
 
     return -early_stopping.best
 
@@ -165,5 +172,5 @@ best = fmin(
     trials=trials
 )
 
-print(f'best configuration: {best}')
-print(f'best accuracy: {-min(trials.losses())}')
+print(f'best hyperparameter configuration: {best}')
+print(f'best score: {-min(trials.losses())}')
