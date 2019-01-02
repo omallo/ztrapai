@@ -69,12 +69,13 @@ def create_learner(data, model_factory_func, model_split_func, models_base_path,
 
 
 def bootstrap_training():
+    model_name = 'resnet34'
     models_base_path = Path('/artifacts')
 
     data = create_data(batch_size=64)
     learn = create_learner(data, models.resnet34, resnet_split, models_base_path, nn.CrossEntropyLoss())
 
-    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
+    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
 
     learn.callbacks = [model_saving, early_stopping]
@@ -110,25 +111,25 @@ def train(args):
     pprint(args)
     print(flush=True)
 
-    model_type = 'resnet34'
+    model_name = 'resnet34'
     loss_config = args[0]
 
     loss_func = get_loss_func(loss_config)
 
     models_base_path = Path('/artifacts')
 
-    if not os.path.isfile(f'{models_base_path}/models/{model_type}.pth'):
+    if not os.path.isfile(f'{models_base_path}/models/{model_name}.pth'):
         bootstrap_training()
 
     data = create_data(batch_size=64)
     learn = create_learner(data, models.resnet34, resnet_split, models_base_path, loss_func)
 
-    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
+    model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
 
     learn.callbacks = [model_saving, early_stopping]
 
-    learn.load(model_type)
+    learn.load(model_name)
 
     unfreeze_lr = 1e-3
     cycle_len = 10
