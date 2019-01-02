@@ -211,7 +211,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
 
 hyper_space = {
     'model': hp.choice('model', ('resnet34',)),
-    'dropout': hp.choice('dropout', (0.0, 0.2, 0.5, 0.8)),
+    'dropout': hp.choice('dropout', (0.1, 0.2, 0.5, 0.8)),
     'loss': hp.choice('loss', (
         {
             'type': 'cce'
