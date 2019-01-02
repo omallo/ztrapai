@@ -9,6 +9,14 @@ class MultiTrainSaveModelCallback(SaveModelCallback):
         old_best = self.best if hasattr(self, 'best') else None
         super().on_train_begin(**kwargs)
         self.best = old_best or self.best
+        self.best_last_cycle = float('inf') if self.operator == np.less else -float('inf')
+
+    def on_epoch_end(self, epoch, **kwargs):
+        super().on_epoch_end(epoch, **kwargs)
+
+        current = self.get_monitor_value()
+        if self.operator(current, self.best_last_cycle):
+            self.best_last_cycle = current
 
 
 @dataclass
@@ -155,7 +163,7 @@ def train(args):
     previous_scores = list(filter(lambda l: l is not None, trials.losses()))
     if len(previous_scores) > 0:
         # TODO: should be done per model type
-        best_score_to_restore = min(previous_scores) if model_saving.mode == 'min' else -min(previous_scores)
+        best_score_to_restore = min(previous_scores) if model_saving.operator == np.less else -min(previous_scores)
         log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}\n')
         model_saving.best = best_score_to_restore
         early_stopping.best = best_score_to_restore
@@ -176,14 +184,20 @@ def train(args):
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
-    best_score = model_saving.best
+    best_score = model_saving.best_last_cycle
     if isinstance(best_score, Tensor):
         best_score = best_score.item()
+    if model_saving.operator != np.less:
+        best_score = -best_score
 
-    return best_score if model_saving.mode == 'min' else -best_score
+    log(f'\nbest {model_saving.monitor} of current training cycle: {best_score}')
+
+    return best_score
 
 
-shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
+if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
+    log('restoring models')
+    shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
 hyper_space = [
     hp.choice('model', ('resnet34',)),
@@ -205,14 +219,22 @@ hyper_space = [
 ]
 
 trials = Trials()
+if os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
+    log('restoring persisted trials')
+    shutil.copy('/storage/models/ztrapai/cifar10/trials.p', '/artifacts/trials.p')
+    with open('/artifacts/trials.p', 'rb') as trials_file:
+        trials = pickle.load(trials_file)
 
 best = fmin(
     train,
     space=hyper_space,
     algo=tpe.suggest,
-    max_evals=10,
+    max_evals=len(trials.losses()) + 10,
     trials=trials
 )
+
+with open('/artifacts/trials.p', 'wb') as trials_file:
+    pickle.dump(trials, trials_file)
 
 print(f'best hyperparameter configuration: {best}')
 print(f'best score: {-min(trials.losses())}')
