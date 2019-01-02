@@ -188,7 +188,8 @@ def train(args):
         learn.unfreeze()
         while not early_stopping.early_stopped:
             learn.fit_one_cycle(cycle_len, max_lr=lr)
-            log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
+            log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}')
+            log(f'--> best {best_score_tracker.monitor} of current optimization run: {best_score_tracker.best:.6f}\n')
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
@@ -198,7 +199,7 @@ def train(args):
     if model_saving.operator != np.less:
         best_score = -best_score
 
-    log(f'\nbest {model_saving.monitor} of current training cycle: {best_score}')
+    log(f'\nloss of current optimization runcycle: {best_score}')
 
     return best_score
 
