@@ -230,7 +230,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
     shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
 hyper_space = {
-    'model': hp.choice('model', ('resnet34', 'resnet34_small', 'preact_resnet34')),
+    'model': hp.choice('model', ('resnet34_small', 'preact_resnet34')),
     'dropout': hp.choice('dropout', (0.1, 0.2, 0.5, 0.8)),
     'loss': hp.choice('loss', (
         {
@@ -260,7 +260,7 @@ best = fmin(
     train,
     space=hyper_space,
     algo=tpe.suggest,
-    max_evals=len(trials.trials) + 10,
+    max_evals=len(trials.trials) + 20,
     trials=trials
 )
 
