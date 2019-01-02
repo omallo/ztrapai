@@ -109,7 +109,7 @@ def get_loss_func(loss_config):
 
 
 def bootstrap_training(model_name, model_factory):
-    log('bootstraping the training\n')
+    log(f'bootstraping the training for model "{model_name}"\n')
 
     models_base_path = Path('/artifacts')
 
