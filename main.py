@@ -98,8 +98,8 @@ def bootstrap_training():
 
 
 def get_loss_func(loss_config):
-    if loss_config['type'] == 'bce':
-        return F.binary_cross_entropy_with_logits
+    if loss_config['type'] == 'cce':
+        return F.cross_entropy
     elif loss_config['type'] == 'focal':
         return FocalLoss(gamma=loss_config['gamma'])
     else:
@@ -143,7 +143,7 @@ def train(args):
 hyper_space = [
     hp.choice('loss_type', (
         {
-            'type': 'bce'
+            'type': 'cce'
         },
         {
             'type': 'focal',
