@@ -63,7 +63,8 @@ def create_learner(data, model_factory_func, model_split_func, models_base_path,
         pretrained=True,
         split_on=model_split_func,
         metrics=[accuracy],
-        path=models_base_path
+        path=models_base_path,
+        loss_func=loss_func
     )
 
 
