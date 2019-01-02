@@ -2,7 +2,7 @@ from fastai.callbacks import *
 from fastai.vision import *
 from hyperopt import fmin, tpe, hp, Trials
 
-from .resnet import *
+from resnet import *
 
 
 @dataclass
