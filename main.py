@@ -168,6 +168,7 @@ def train(args):
         model_saving.best = best_bootstraping_score
         early_stopping.best = best_bootstraping_score
 
+    # TODO: check whether previous metrics would also be available on the learner and decide which one to use
     previous_scores = list(filter(lambda l: l is not None, trials.losses()))
     if len(previous_scores) > 0:
         # TODO: should be done per model type
