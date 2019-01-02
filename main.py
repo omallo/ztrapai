@@ -26,18 +26,37 @@ class MultiTrainEarlyStoppingCallback(EarlyStoppingCallback):
 
 
 class FocalLoss(nn.Module):
-    def __init__(self, gamma=2):
+    def __init__(self, gamma, class_weight=None):
         super().__init__()
         self.gamma = gamma
+        self.class_weight = class_weight
 
-    def forward(self, input, target):
-        max_val = (-input).clamp(min=0)
-        loss = input - input * target + max_val + ((-max_val).exp() + (-input - max_val).exp()).log()
+    def forward(self, logit, target):
+        target = target.view(-1, 1).long()
 
-        invprobs = F.logsigmoid(-input * (target * 2.0 - 1.0))
-        loss = (invprobs * self.gamma).exp() * loss
+        b, c, h, w = logit.size()
 
-        return loss.sum(dim=1).mean()
+        class_weight = self.class_weight
+        if class_weight is None:
+            class_weight = [1] * c
+
+        logit = logit.permute(0, 2, 3, 1).contiguous().view(-1, c)
+        prob = F.softmax(logit, 1)
+        select = torch.FloatTensor(len(prob), c).zero_().cuda()
+        select.scatter_(1, target, 1.)
+
+        class_weight = torch.FloatTensor(class_weight).cuda().view(-1, 1)
+        class_weight = torch.gather(class_weight, 0, target)
+
+        prob = (prob * select).sum(1).view(-1, 1)
+        prob = torch.clamp(prob, 1e-8, 1 - 1e-8)
+
+        focus = torch.pow((1 - prob), self.gamma)
+        focus = torch.clamp(focus, 0, 2)
+
+        batch_loss = - class_weight * focus * prob.log()
+
+        return batch_loss.mean()
 
 
 def resnet_split(model):
@@ -142,7 +161,7 @@ def train(args):
 
 
 hyper_space = [
-    hp.choice('loss_type', (
+    hp.choice('loss', (
         {
             'type': 'cce'
         },
