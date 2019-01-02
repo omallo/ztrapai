@@ -109,19 +109,19 @@ def bootstrap_training(model_name, model_factory):
     learn.freeze()
     early_stopping.patience = 3
     learn.fit(100, lr=freeze_lr)
-    log(f'--> best {early_stopping.monitor}: {early_stopping.best}\n')
+    log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
 
     learn.unfreeze()
     early_stopping.patience = 3
     learn.fit(100, lr=slice(unfreeze_lr))
-    log(f'--> best {early_stopping.monitor}: {early_stopping.best}\n')
+    log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
 
     cycle_len = 10
     early_stopping.patience = cycle_len - 1
     early_stopping.early_stopped = False
     while not early_stopping.early_stopped:
         learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
-        log(f'--> best {early_stopping.monitor}: {early_stopping.best}\n')
+        log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
 
 
 def train(args):
@@ -156,7 +156,7 @@ def train(args):
         early_stopping.early_stopped = False
         while not early_stopping.early_stopped:
             learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
-            log(f'--> best {early_stopping.monitor}: {early_stopping.best}\n')
+            log(f'--> best {early_stopping.monitor}: {early_stopping.best:.6f}\n')
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
