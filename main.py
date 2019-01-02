@@ -24,7 +24,7 @@ class MultiTrainEarlyStoppingCallback(EarlyStoppingCallback):
 
 
 @dataclass
-class MetricTrackerCallback(TrackerCallback):
+class MultiTrainMetricTrackerCallback(TrackerCallback):
     def on_train_begin(self, **kwargs):
         old_best = self.best if hasattr(self, 'best') else None
         super().on_train_begin(**kwargs)
@@ -162,7 +162,7 @@ def train(args):
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
-    best_score_tracker = MetricTrackerCallback(learn, monitor='accuracy', mode='max')
+    best_score_tracker = MultiTrainMetricTrackerCallback(learn, monitor='accuracy', mode='max')
 
     if best_bootstraping_score:
         model_saving.best = best_bootstraping_score
@@ -177,7 +177,7 @@ def train(args):
         model_saving.best = best_score_to_restore
         early_stopping.best = best_score_to_restore
 
-    learn.callbacks = [model_saving, early_stopping]
+    learn.callbacks = [model_saving, early_stopping, best_score_tracker]
 
     learn.load(model_name)
 
@@ -247,5 +247,5 @@ best = fmin(
 with open('/artifacts/trials.p', 'wb') as trials_file:
     pickle.dump(trials, trials_file)
 
-print(f'best hyperparameter configuration: {best}')
-print(f'best score: {-min(trials.losses())}')
+log(f'best hyperparameter configuration: {best}')
+log(f'best score: {-min(trials.losses())}')
