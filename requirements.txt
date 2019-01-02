@@ -1,0 +1,2 @@
+fastai==1.0.39
+hyperopt==0.1.1
