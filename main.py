@@ -156,7 +156,7 @@ def train(args):
     if len(previous_scores) > 0:
         # TODO: should be done per model type
         best_score_to_restore = min(previous_scores) if model_saving.mode == 'min' else -min(previous_scores)
-        log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}')
+        log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}\n')
         model_saving.best = best_score_to_restore
         early_stopping.best = best_score_to_restore
 
@@ -176,7 +176,11 @@ def train(args):
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
-    return model_saving.best.item() if model_saving.mode == 'min' else -model_saving.best.item()
+    best_score = model_saving.best
+    if isinstance(best_score, Tensor):
+        best_score = best_score.item()
+
+    return best_score if model_saving.mode == 'min' else -best_score
 
 
 shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
