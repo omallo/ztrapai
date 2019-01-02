@@ -152,6 +152,13 @@ def train(args):
         model_saving.best = best_bootstraping_score
         early_stopping.best = best_bootstraping_score
 
+    if len(trials.losses()) > 0:
+        # TODO: should be done per model type
+        best_score_to_restore = min(trials.losses()) if model_saving.mode == 'min' else -min(trials.losses())
+        log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}')
+        model_saving.best = best_score_to_restore
+        early_stopping.best = best_score_to_restore
+
     learn.callbacks = [model_saving, early_stopping]
 
     learn.load(model_name)
