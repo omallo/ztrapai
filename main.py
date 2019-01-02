@@ -68,11 +68,12 @@ def create_data(batch_size):
     )
 
 
-def create_learner(data, model_factory_func, model_split_func, models_base_path, loss_func):
+def create_learner(data, model_factory_func, model_split_func, models_base_path, dropout, loss_func):
     return create_cnn(
         data,
         model_factory_func,
         pretrained=True,
+        ps=dropout,
         split_on=model_split_func,
         metrics=[accuracy],
         path=models_base_path,
@@ -104,7 +105,7 @@ def bootstrap_training(model_name, model_factory):
     models_base_path = Path('/artifacts')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, model_factory, resnet_split, models_base_path, nn.CrossEntropyLoss())
+    learn = create_learner(data, model_factory, resnet_split, models_base_path, 0.2, nn.CrossEntropyLoss())
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
@@ -136,8 +137,9 @@ def bootstrap_training(model_name, model_factory):
 
 def train(args):
     model_name = args[0]
-    loss_config = args[1]
-    lr_scheduler_config = args[2]
+    dropout = args[1]
+    loss_config = args[2]
+    lr_scheduler_config = args[3]
 
     model_factory = get_model_factory(model_name)
     loss_func = get_loss_func(loss_config)
@@ -151,7 +153,7 @@ def train(args):
     log(f'\ntraining with hyper parameters: {args}\n')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, model_factory, resnet_split, models_base_path, loss_func)
+    learn = create_learner(data, model_factory, resnet_split, models_base_path, dropout, loss_func)
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_name)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
@@ -201,6 +203,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
 
 hyper_space = [
     hp.choice('model', ('resnet34',)),
+    hp.choice('dropout', (None, 0.2, 0.5, 0.8)),
     hp.choice('loss', (
         {
             'type': 'cce'
