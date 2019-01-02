@@ -213,7 +213,7 @@ hyper_space = [
     hp.choice('lr_scheduler', (
         {
             'type': 'one_cycle',
-            'cycle_len': hp.choice('one_cycle_scheduler_cycle_len', (5, 10, 20))
+            'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10, 20))
         },
     ))
 ]
@@ -229,7 +229,7 @@ best = fmin(
     train,
     space=hyper_space,
     algo=tpe.suggest,
-    max_evals=len(trials.losses()) + 10,
+    max_evals=len(trials.trials) + 10,
     trials=trials
 )
 
