@@ -200,7 +200,7 @@ def train(space):
     if model_saving.operator != np.less:
         best_score = -best_score
 
-    log(f'\nloss of current optimization runcycle: {best_score}')
+    log(f'\nloss of current optimization run: {best_score:.6f}')
 
     return best_score
 
