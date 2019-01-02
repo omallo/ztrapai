@@ -152,9 +152,10 @@ def train(args):
         model_saving.best = best_bootstraping_score
         early_stopping.best = best_bootstraping_score
 
-    if len(trials.losses()) > 0:
+    previous_scores = list(filter(lambda l: l is not None, trials.losses()))
+    if len(previous_scores) > 0:
         # TODO: should be done per model type
-        best_score_to_restore = min(trials.losses()) if model_saving.mode == 'min' else -min(trials.losses())
+        best_score_to_restore = min(previous_scores) if model_saving.mode == 'min' else -min(previous_scores)
         log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}')
         model_saving.best = best_score_to_restore
         early_stopping.best = best_score_to_restore
