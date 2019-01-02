@@ -72,7 +72,7 @@ def bootstrap_training():
     models_base_path = Path('/artifacts')
 
     data = create_data(batch_size=64)
-    learn = create_learner(data, models.resnet34, resnet_split, models_base_path, F.binary_cross_entropy_with_logits)
+    learn = create_learner(data, models.resnet34, resnet_split, models_base_path, nn.CrossEntropyLoss())
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
@@ -99,7 +99,7 @@ def bootstrap_training():
 
 def get_loss_func(loss_config):
     if loss_config['type'] == 'cce':
-        return F.cross_entropy
+        return nn.CrossEntropyLoss()
     elif loss_config['type'] == 'focal':
         return FocalLoss(gamma=loss_config['gamma'])
     else:
