@@ -94,7 +94,7 @@ def get_model_factory(model_name):
     elif model_name == 'resnet50':
         return models.resnet50
     elif model_name == 'resnet34_small':
-        return ResNet34()
+        return lambda pretrained: ResNet34()
     else:
         raise Exception(f'Unsupported model type "{model_name}"')
 
