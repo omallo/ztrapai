@@ -231,14 +231,14 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
 
 hyper_space = {
     'model': hp.choice('model', ('resnet34_small', 'preact_resnet34')),
-    'dropout': hp.choice('dropout', (0.1, 0.2, 0.5, 0.8)),
+    'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
     'loss': hp.choice('loss', (
         {
             'type': 'cce'
         },
         {
             'type': 'focal',
-            'gamma': hp.choice('focal_loss_gamma', (1.0, 2.0, 5.0))
+            'gamma': hp.quniform('focal_loss_gamma', .5, 5.5, 1)
         }
     )),
     'lr_scheduler': hp.choice('lr_scheduler', (
