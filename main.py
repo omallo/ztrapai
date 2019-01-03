@@ -234,7 +234,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
     shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
 hyper_space = {
-    'model': hp.choice('model', ('resnet34_small',)),
+    'model': hp.choice('model', ('preact_resnet34',)),
     'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
     'loss': hp.choice('loss', (
         {
