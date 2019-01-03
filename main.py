@@ -104,6 +104,8 @@ def get_model_config(model_type):
         return ModelConfig(models.resnet50, resnet_split, True)
     elif model_type == 'resnet34_small':
         return ModelConfig(lambda pretrained: ResNet34(), None, False)
+    elif model_type == 'preact_resnet18':
+        return ModelConfig(lambda pretrained: PreActResNet18(), None, False)
     elif model_type == 'preact_resnet34':
         return ModelConfig(lambda pretrained: PreActResNet34(), None, False)
     else:
@@ -234,7 +236,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
     shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
 hyper_space = {
-    'model': hp.choice('model', ('preact_resnet34',)),
+    'model': hp.choice('model', ('preact_resnet18',)),
     'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
     'loss': hp.choice('loss', (
         {
