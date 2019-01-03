@@ -176,7 +176,7 @@ def train(space):
     if not os.path.isfile(f'{models_base_path}/models/{model_type}.pth'):
         best_bootstraping_score = bootstrap_training(model_type)
 
-    log(f'\ntraining with hyper parameters: {space}')
+    log(f'\nhyper parameters: {space}')
 
     data = create_data(batch_size=64)
     learn = create_learner(data, model_type, models_base_path, dropout, loss_func)
