@@ -263,7 +263,7 @@ hyper_space = {
 }
 
 trials = Trials()
-if os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
+if False and os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
     log('restoring persisted trials')
     shutil.copy('/storage/models/ztrapai/cifar10/trials.p', '/artifacts/trials.p')
     with open('/artifacts/trials.p', 'rb') as trials_file:
