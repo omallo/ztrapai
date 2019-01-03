@@ -166,6 +166,7 @@ def train(space):
     dropout = space['dropout']
     loss_config = space['loss']
     lr_scheduler_config = space['lr_scheduler']
+    mixup_config = space['mixup']
 
     loss_func = get_loss_func(loss_config)
 
@@ -179,6 +180,9 @@ def train(space):
 
     data = create_data(batch_size=64)
     learn = create_learner(data, model_type, models_base_path, dropout, loss_func)
+
+    if mixup_config['enabled']:
+        learn = learn.mixup(alpha=mixup_config['alpha'])
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
@@ -246,6 +250,15 @@ hyper_space = {
             'type': 'one_cycle',
             'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10))
         },
+    )),
+    'mixup': hp.choice('mixup', (
+        {
+            'enabled': False
+        },
+        {
+            'enabled': True,
+            'alpha': hp.quniform('mixup_alpha', 2.5, 5.5, 1) / 10
+        }
     ))
 }
 
@@ -260,7 +273,7 @@ best = fmin(
     train,
     space=hyper_space,
     algo=tpe.suggest,
-    max_evals=len(trials.trials) + 20,
+    max_evals=len(trials.trials) + 10,
     trials=trials
 )
 
