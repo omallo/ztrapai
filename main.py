@@ -175,7 +175,7 @@ def train(space):
     if not os.path.isfile(f'{models_base_path}/models/{model_type}.pth'):
         best_bootstraping_score = bootstrap_training(model_type)
 
-    log(f'\ntraining with hyper parameters: {space}\n')
+    log(f'\ntraining with hyper parameters: {space}')
 
     data = create_data(batch_size=64)
     learn = create_learner(data, model_type, models_base_path, dropout, loss_func)
@@ -193,7 +193,7 @@ def train(space):
     if len(previous_scores) > 0:
         # TODO: should be done per model type
         best_score_to_restore = min(previous_scores) if model_saving.operator == np.less else -min(previous_scores)
-        log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}\n')
+        log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}')
         model_saving.best = best_score_to_restore
         early_stopping.best = best_score_to_restore
 
@@ -210,7 +210,7 @@ def train(space):
         while not early_stopping.early_stopped:
             learn.fit_one_cycle(cycle_len, max_lr=lr)
             log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}')
-            log(f'--> best {best_score_tracker.monitor} of current optimization run: {best_score_tracker.best:.6f}\n')
+            log(f'--> best {best_score_tracker.monitor} of current optimization run: {best_score_tracker.best:.6f}')
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
@@ -220,7 +220,7 @@ def train(space):
     if model_saving.operator != np.less:
         best_score = -best_score
 
-    log(f'\nloss of current optimization run: {best_score:.6f}')
+    log(f'loss of current optimization run: {best_score:.6f}\n')
 
     return best_score
 
