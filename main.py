@@ -273,7 +273,7 @@ best = fmin(
     train,
     space=hyper_space,
     algo=tpe.suggest,
-    max_evals=len(trials.trials) + 10,
+    max_evals=len(trials.trials) + 20,
     trials=trials
 )
 
