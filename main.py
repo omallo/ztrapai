@@ -280,5 +280,21 @@ best = fmin(
 with open('/artifacts/trials.p', 'wb') as trials_file:
     pickle.dump(trials, trials_file)
 
-log(f'best hyper parameter configuration: {space_eval(hyper_space, best)}')
+best_parameters = space_eval(hyper_space, best)
+
+log(f'best hyper parameter configuration: {best_parameters}')
 log(f'best score: {-min(trials.losses())}')
+
+best_model_type = best_parameters['model']
+learn = create_learner(
+    create_data(64),
+    best_model_type,
+    Path('/artifacts'),
+    best_parameters['dropout'],
+    get_loss_func(best_parameters['loss']))
+
+learn.load(best_model_type)
+
+prediction_logits, true_categories = learn.TTA(ds_type=DatasetType.Valid)
+prediction_accuracy = accuracy(prediction_logits, true_categories)
+log(f'prediction accuracy with TTA: {prediction_accuracy}')
