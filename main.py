@@ -26,19 +26,6 @@ class MultiTrainEarlyStoppingCallback(EarlyStoppingCallback):
         return self.early_stopped
 
 
-@dataclass
-class MultiTrainMetricTrackerCallback(TrackerCallback):
-    def on_train_begin(self, **kwargs):
-        old_best = self.best if hasattr(self, 'best') else None
-        super().on_train_begin(**kwargs)
-        self.best = old_best or self.best
-
-    def on_epoch_end(self, epoch, **kwargs):
-        current = self.get_monitor_value()
-        if self.operator(current, self.best):
-            self.best = current
-
-
 class ModelConfig:
     def __init__(self, factory, split_func, pretrained):
         self.factory = factory
@@ -65,6 +52,10 @@ class FocalLoss(nn.Module):
 
 def log(*args):
     print(*args, flush=True)
+
+
+def get_tensor_item(value):
+    return value.item() if isinstance(value, Tensor) else value
 
 
 def resnet_split(model):
@@ -201,11 +192,9 @@ def train(space):
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
-    best_score_tracker = MultiTrainMetricTrackerCallback(learn, monitor='accuracy', mode='max')
 
     if best_bootstraping_score:
         model_saving.best = best_bootstraping_score
-        early_stopping.best = best_bootstraping_score
 
     # TODO: check whether previous metrics would also be available on the learner and decide which one to use
     previous_scores = list(filter(lambda l: l is not None, trials.losses()))
@@ -214,9 +203,8 @@ def train(space):
         best_score_to_restore = min(previous_scores) if model_saving.operator == np.less else -min(previous_scores)
         log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}')
         model_saving.best = best_score_to_restore
-        early_stopping.best = best_score_to_restore
 
-    learn.callbacks = [model_saving, early_stopping, best_score_tracker]
+    learn.callbacks = [model_saving, early_stopping]
 
     learn.load(model_type)
 
@@ -229,13 +217,11 @@ def train(space):
         while not early_stopping.early_stopped:
             learn.fit_one_cycle(cycle_len, max_lr=lr)
             log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}')
-            log(f'--> best {best_score_tracker.monitor} of current optimization run: {best_score_tracker.best:.6f}')
+            log(f'--> best {early_stopping.monitor} of current optimization run: {early_stopping.best:.6f}')
     else:
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
-    best_score = best_score_tracker.best
-    if isinstance(best_score, Tensor):
-        best_score = best_score.item()
+    best_score = get_tensor_item(early_stopping.best)
     if model_saving.operator != np.less:
         best_score = -best_score
 
