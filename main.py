@@ -97,6 +97,19 @@ def create_learner(data, model_type, models_base_path, dropout, loss_func):
     )
 
 
+def space_eval_trial(space, trial):
+    vals = trial['misc']['vals']
+
+    # unpack the one-element lists to values
+    # and skip over the 0-element lists
+    unpacked_vals = {}
+    for k, v in list(vals.items()):
+        if v:
+            unpacked_vals[k] = v[0]
+
+    return space_eval(space, unpacked_vals)
+
+
 def get_model_config(model_type):
     if model_type == 'resnet34':
         return ModelConfig(models.resnet34, resnet_split, True)
@@ -235,7 +248,7 @@ if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
     log('restoring models')
     shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
-hyper_space = {
+hyperspace = {
     'model': hp.choice('model', ('preact_resnet18',)),
     'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
     'loss': hp.choice('loss', (
@@ -273,7 +286,7 @@ if False and os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
 
 best = fmin(
     train,
-    space=hyper_space,
+    space=hyperspace,
     algo=tpe.suggest,
     max_evals=len(trials.trials) + 10,
     trials=trials
@@ -282,7 +295,7 @@ best = fmin(
 with open('/artifacts/trials.p', 'wb') as trials_file:
     pickle.dump(trials, trials_file)
 
-best_parameters = space_eval(hyper_space, best)
+best_parameters = space_eval(hyperspace, best)
 
 log(f'best hyper parameter configuration: {best_parameters}')
 log(f'best score: {-min(trials.losses())}')
