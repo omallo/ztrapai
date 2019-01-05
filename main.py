@@ -74,7 +74,7 @@ def resnet_split(model):
 def create_data(batch_size):
     return (
         ImageItemList
-            .from_folder(untar_data(URLs.CIFAR))
+            .from_folder(untar_data('https://s3.amazonaws.com/fast-ai-imageclas/cifar100'))
             .random_split_by_pct(valid_pct=0.2, seed=42)
             .label_from_folder()
             .transform(get_transforms())
