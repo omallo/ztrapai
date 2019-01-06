@@ -182,12 +182,12 @@ def bootstrap_training(model_type):
         log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
 
-def train(space):
-    model_type = space['model']
-    dropout = space['dropout']
-    loss_config = space['loss']
-    lr_scheduler_config = space['lr_scheduler']
-    mixup_config = space['mixup']
+def train(hyperparams):
+    model_type = hyperparams['model']
+    dropout = hyperparams['dropout']
+    loss_config = hyperparams['loss']
+    lr_scheduler_config = hyperparams['lr_scheduler']
+    mixup_config = hyperparams['mixup']
 
     loss_func = get_loss_func(loss_config)
 
@@ -196,7 +196,7 @@ def train(space):
     if not os.path.isfile(f'{models_base_path}/models/{model_type}.pth'):
         bootstrap_training(model_type)
 
-    log(f'\nhyper parameters: {space}')
+    log(f'\nhyper parameters: {hyperparams}')
 
     data = create_data(batch_size=64)
     learn = create_learner(data, model_type, models_base_path, dropout, loss_func)
@@ -284,18 +284,18 @@ best = fmin(
 with open('/artifacts/trials.p', 'wb') as trials_file:
     pickle.dump(trials, trials_file)
 
-best_parameters = space_eval(hyperspace, best)
+best_hyperparams = space_eval(hyperspace, best)
 
-log(f'best hyper parameter configuration: {best_parameters}')
-log(f'best score: {-min(trials.losses())}')
+log(f'best hyper parameters: {best_hyperparams}')
+log(f'best score: {min(trials.losses())}')
 
-best_model_type = best_parameters['model']
+best_model_type = best_hyperparams['model']
 learn = create_learner(
     create_data(64),
     best_model_type,
     Path('/artifacts'),
-    best_parameters['dropout'],
-    get_loss_func(best_parameters['loss']))
+    best_hyperparams['dropout'],
+    get_loss_func(best_hyperparams['loss']))
 
 learn.load(best_model_type)
 
