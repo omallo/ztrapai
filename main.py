@@ -1,6 +1,6 @@
 from fastai.callbacks import *
 from fastai.vision import *
-from hyperopt import fmin, tpe, hp, space_eval, Trials
+from hyperopt import fmin, tpe, hp, space_eval, Trials, STATUS_OK
 
 from preact_resnet import *
 from resnet import *
@@ -231,12 +231,21 @@ def train(hyperparams):
         raise Exception(f'Unsupported lr scheduler type "{lr_scheduler_config["type"]}"')
 
     best_score = get_tensor_item(early_stopping.best)
-    if model_saving.operator != np.less:
+    if early_stopping.operator != np.less:
         best_score = -best_score
 
     log(f'loss of current optimization run: {best_score:.6f}\n')
 
-    return best_score
+    return {
+        'status': STATUS_OK,
+        'loss': best_score,
+        'training': {
+            'score_metric': {
+                'name': model_saving.monitor,
+                'value': get_tensor_item(model_saving.best)
+            }
+        }
+    }
 
 
 def main():
