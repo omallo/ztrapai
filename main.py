@@ -304,5 +304,5 @@ def main():
     log(f'prediction accuracy with TTA: {prediction_accuracy}')
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
     main()
