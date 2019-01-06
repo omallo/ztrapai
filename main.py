@@ -9,9 +9,20 @@ from resnet import *
 @dataclass
 class MultiTrainSaveModelCallback(SaveModelCallback):
     def on_train_begin(self, **kwargs):
-        old_best = self.best if hasattr(self, 'best') else None
-        super().on_train_begin(**kwargs)
-        self.best = old_best or self.best
+        if os.path.isfile(self.get_metric_file_path()):
+            with open(self.get_metric_file_path(), 'r') as metric_file:
+                self.best = float(metric_file.readline())
+        if not hasattr(self, 'best'):
+            super().on_train_begin(**kwargs)
+
+    def on_epoch_end(self, epoch, **kwargs):
+        super().on_epoch_end(epoch, **kwargs)
+        with open(self.get_metric_file_path(), 'w') as metric_file:
+            metric = get_tensor_item(self.best)
+            metric_file.write(f'{metric}\n')
+
+    def get_metric_file_path(self):
+        return self.learn.path / f'{self.learn.model_dir}/{self.name}_best_{self.monitor}.txt'
 
 
 @dataclass
@@ -164,8 +175,6 @@ def bootstrap_training(model_type):
         learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
         log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
-    return model_saving.best
-
 
 def train(space):
     model_type = space['model']
@@ -178,9 +187,8 @@ def train(space):
 
     models_base_path = Path('/artifacts')
 
-    best_bootstraping_score = None
     if not os.path.isfile(f'{models_base_path}/models/{model_type}.pth'):
-        best_bootstraping_score = bootstrap_training(model_type)
+        bootstrap_training(model_type)
 
     log(f'\nhyper parameters: {space}')
 
@@ -192,17 +200,6 @@ def train(space):
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
     early_stopping = MultiTrainEarlyStoppingCallback(learn, monitor='accuracy', mode='max', patience=1, min_delta=1e-3)
-
-    if best_bootstraping_score:
-        model_saving.best = best_bootstraping_score
-
-    # TODO: check whether previous metrics would also be available on the learner and decide which one to use
-    previous_scores = list(filter(lambda l: l is not None, trials.losses()))
-    if len(previous_scores) > 0:
-        # TODO: should be done per model type
-        best_score_to_restore = min(previous_scores) if model_saving.operator == np.less else -min(previous_scores)
-        log(f'restoring best {model_saving.monitor}: {best_score_to_restore:.6f}')
-        model_saving.best = best_score_to_restore
 
     learn.callbacks = [model_saving, early_stopping]
 
