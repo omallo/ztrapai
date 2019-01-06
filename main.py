@@ -178,7 +178,7 @@ def bootstrap_training(model_type):
     early_stopping.patience = cycle_len - 1
     early_stopping.early_stopped = False
     while not early_stopping.early_stopped:
-        learn.fit_one_cycle(cycle_len, max_lr=unfreeze_lr)
+        learn.fit_one_cycle(cycle_len, max_lr=slice(unfreeze_lr))
         log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}\n')
 
 
@@ -217,7 +217,7 @@ def train(hyperparams):
         early_stopping.early_stopped = False
         learn.unfreeze()
         while not early_stopping.early_stopped:
-            learn.fit_one_cycle(cycle_len, max_lr=lr)
+            learn.fit_one_cycle(cycle_len, max_lr=slice(lr))
             log(f'--> best overall {model_saving.monitor}: {model_saving.best:.6f}')
             log(f'--> best {early_stopping.monitor} of current optimization run: {early_stopping.best:.6f}')
     else:
