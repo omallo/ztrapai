@@ -73,13 +73,13 @@ def resnet_split(model):
     return (model[0][6], model[1])
 
 
-def create_data(batch_size):
+def create_data(batch_size, tfms_enabled):
     return (
         ImageItemList
             .from_folder(untar_data('https://s3.amazonaws.com/fast-ai-imageclas/cifar100'))
             .random_split_by_pct(valid_pct=0.2, seed=42)
             .label_from_folder()
-            .transform(get_transforms())
+            .transform(get_transforms() if tfms_enabled else None)
             .add_test_folder('test')
             .databunch(bs=batch_size)
     )
@@ -141,7 +141,7 @@ def bootstrap_training(model_type):
 
     models_base_path = Path('/artifacts')
 
-    data = create_data(batch_size=64)
+    data = create_data(batch_size=64, tfms_enabled=True)
     learn = create_learner(data, model_type, models_base_path, 0.2, nn.CrossEntropyLoss())
 
     model_saving = MultiTrainSaveModelCallback(learn, monitor='accuracy', mode='max', name=model_type)
@@ -187,6 +187,7 @@ def train(hyperparams):
     dropout = hyperparams['dropout']
     loss_config = hyperparams['loss']
     lr_scheduler_config = hyperparams['lr_scheduler']
+    tfms_config = hyperparams['transforms']
     mixup_config = hyperparams['mixup']
 
     loss_func = get_loss_func(loss_config)
@@ -198,7 +199,13 @@ def train(hyperparams):
 
     log(f'\nhyper parameters: {hyperparams}')
 
-    learn = create_learner(create_data(batch_size=64), model_type, models_base_path, dropout, loss_func)
+    learn = create_learner(
+        create_data(batch_size=64, tfms_enabled=tfms_config['enabled']),
+        model_type,
+        models_base_path,
+        dropout,
+        loss_func
+    )
 
     if mixup_config['enabled']:
         learn = learn.mixup(alpha=mixup_config['alpha'])
@@ -255,6 +262,14 @@ def main():
                 'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10))
             },
         )),
+        'transforms': hp.choice('transforms', (
+            {
+                'enabled': False
+            },
+            {
+                'enabled': True
+            }
+        )),
         'mixup': hp.choice('mixup', (
             {
                 'enabled': False
@@ -291,7 +306,7 @@ def main():
 
     best_model_type = best_hyperparams['model']
     learn = create_learner(
-        create_data(64),
+        create_data(batch_size=64, tfms_enabled=best_hyperparams['transforms']['enabled']),
         best_model_type,
         Path('/artifacts'),
         best_hyperparams['dropout'],
