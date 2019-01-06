@@ -198,8 +198,7 @@ def train(hyperparams):
 
     log(f'\nhyper parameters: {hyperparams}')
 
-    data = create_data(batch_size=64)
-    learn = create_learner(data, model_type, models_base_path, dropout, loss_func)
+    learn = create_learner(create_data(batch_size=64), model_type, models_base_path, dropout, loss_func)
 
     if mixup_config['enabled']:
         learn = learn.mixup(alpha=mixup_config['alpha'])
@@ -233,72 +232,77 @@ def train(hyperparams):
     return best_score
 
 
-if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
-    log('restoring models')
-    shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
+def main():
+    if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
+        log('restoring models')
+        shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
 
-hyperspace = {
-    'model': hp.choice('model', ('preact_resnet18',)),
-    'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
-    'loss': hp.choice('loss', (
-        {
-            'type': 'cce'
-        },
-        {
-            'type': 'focal',
-            'gamma': hp.quniform('focal_loss_gamma', .5, 5.5, 1)
-        }
-    )),
-    'lr_scheduler': hp.choice('lr_scheduler', (
-        {
-            'type': 'one_cycle',
-            'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10))
-        },
-    )),
-    'mixup': hp.choice('mixup', (
-        {
-            'enabled': False
-        },
-        {
-            'enabled': True,
-            'alpha': hp.quniform('mixup_alpha', 2.5, 5.5, 1) / 10
-        }
-    ))
-}
+    hyperspace = {
+        'model': hp.choice('model', ('preact_resnet18',)),
+        'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
+        'loss': hp.choice('loss', (
+            {
+                'type': 'cce'
+            },
+            {
+                'type': 'focal',
+                'gamma': hp.quniform('focal_loss_gamma', .5, 5.5, 1)
+            }
+        )),
+        'lr_scheduler': hp.choice('lr_scheduler', (
+            {
+                'type': 'one_cycle',
+                'cycle_len': hp.choice('one_cycle_lr_scheduler_cycle_len', (5, 10))
+            },
+        )),
+        'mixup': hp.choice('mixup', (
+            {
+                'enabled': False
+            },
+            {
+                'enabled': True,
+                'alpha': hp.quniform('mixup_alpha', 2.5, 5.5, 1) / 10
+            }
+        ))
+    }
 
-trials = Trials()
-if False and os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
-    log('restoring persisted trials')
-    shutil.copy('/storage/models/ztrapai/cifar10/trials.p', '/artifacts/trials.p')
-    with open('/artifacts/trials.p', 'rb') as trials_file:
-        trials = pickle.load(trials_file)
+    trials = Trials()
+    if False and os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
+        log('restoring persisted trials')
+        shutil.copy('/storage/models/ztrapai/cifar10/trials.p', '/artifacts/trials.p')
+        with open('/artifacts/trials.p', 'rb') as trials_file:
+            trials = pickle.load(trials_file)
 
-best = fmin(
-    train,
-    space=hyperspace,
-    algo=tpe.suggest,
-    max_evals=len(trials.trials) + 10,
-    trials=trials
-)
+    best = fmin(
+        train,
+        space=hyperspace,
+        algo=tpe.suggest,
+        max_evals=len(trials.trials) + 10,
+        trials=trials
+    )
 
-with open('/artifacts/trials.p', 'wb') as trials_file:
-    pickle.dump(trials, trials_file)
+    with open('/artifacts/trials.p', 'wb') as trials_file:
+        pickle.dump(trials, trials_file)
 
-best_hyperparams = space_eval(hyperspace, best)
+    best_hyperparams = space_eval(hyperspace, best)
 
-log(f'best hyper parameters: {best_hyperparams}')
-log(f'best score: {min(trials.losses())}')
+    log(f'best hyper parameters: {best_hyperparams}')
+    log(f'best score: {min(trials.losses())}')
 
-best_model_type = best_hyperparams['model']
-learn = create_learner(
-    create_data(64),
-    best_model_type,
-    Path('/artifacts'),
-    best_hyperparams['dropout'],
-    get_loss_func(best_hyperparams['loss']))
+    best_model_type = best_hyperparams['model']
+    learn = create_learner(
+        create_data(64),
+        best_model_type,
+        Path('/artifacts'),
+        best_hyperparams['dropout'],
+        get_loss_func(best_hyperparams['loss']))
 
-learn.load(best_model_type)
+    learn.load(best_model_type)
 
-prediction_logits, true_categories = learn.TTA(ds_type=DatasetType.Valid)
-prediction_accuracy = accuracy(prediction_logits, true_categories)
-log(f'prediction accuracy with TTA: {prediction_accuracy}')
+    prediction_logits, true_categories = learn.TTA(ds_type=DatasetType.Valid)
+    prediction_accuracy = accuracy(prediction_logits, true_categories)
+    log(f'prediction accuracy with TTA: {prediction_accuracy}')
+
+
+if __name__ == 'main':
+    main()
