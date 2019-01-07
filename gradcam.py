@@ -85,7 +85,7 @@ class GradCam():
         return cam
 
 
-def apply_colormap_on_image(org_im, activation, colormap_name='hsv'):
+def apply_colormap_on_image(org_im, activation, colormap_name='gist_rainbow'):
     """
         Apply heatmap on image
     Args:
