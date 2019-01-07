@@ -4,11 +4,12 @@ Created on Thu Oct 26 11:06:51 2017
 @author: Utku Ozbulak - github.com/utkuozbulak
 """
 import copy
+
+import matplotlib.cm as mpl_color_map
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-import matplotlib.cm as mpl_color_map
 
 
 class CamExtractor():
@@ -85,7 +86,7 @@ class GradCam():
         return cam
 
 
-def apply_colormap_on_image(org_im, activation, colormap_name='jet'):
+def apply_colormap_on_image(org_im, activation, colormap_name='jet', alpha=0.5):
     """
         Apply heatmap on image
     Args:
@@ -98,7 +99,7 @@ def apply_colormap_on_image(org_im, activation, colormap_name='jet'):
     no_trans_heatmap = color_map(activation)
     # Change alpha channel in colormap to make sure original image is displayed
     heatmap = copy.copy(no_trans_heatmap)
-    heatmap[:, :, 3] = 0.4
+    heatmap[:, :, 3] = alpha
     heatmap = Image.fromarray((heatmap * 255).astype(np.uint8))
     no_trans_heatmap = Image.fromarray((no_trans_heatmap * 255).astype(np.uint8))
 
