@@ -323,9 +323,13 @@ def main():
 
     learn.load(best_model_type)
 
-    prediction_logits, true_categories = learn.TTA(ds_type=DatasetType.Valid)
+    if best_hyperparams['transforms']['enabled']:
+        prediction_logits, true_categories = learn.TTA(ds_type=DatasetType.Valid)
+    else:
+        prediction_logits, true_categories = learn.get_preds(ds_type=DatasetType.Valid)
+
     prediction_accuracy = accuracy(prediction_logits, true_categories)
-    log(f'prediction accuracy with TTA: {prediction_accuracy}')
+    log(f'prediction accuracy on validation set: {prediction_accuracy}')
 
 
 if __name__ == '__main__':
