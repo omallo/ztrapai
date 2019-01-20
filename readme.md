@@ -15,6 +15,12 @@ pip install -r requirements.txt
 - https://www.fast.ai/2018/07/16/auto-ml2/
 - https://www.fast.ai/2018/07/23/auto-ml-3/
 
+
+#### Parameter Search
+
+- https://arxiv.org/pdf/1803.09820.pdf
+
+
 #### Visualization Techniques
 
 - https://github.com/metalbubble/CAM
