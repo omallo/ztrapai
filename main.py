@@ -91,7 +91,7 @@ def create_data(batch_size, tfms_enabled):
 
 def create_learner(data, model_type, models_base_path, dropout, loss_func):
     model_config = get_model_config(model_type)
-    return create_cnn(
+    return cnn_learner(
         data,
         model_config.factory,
         pretrained=model_config.pretrained,
