@@ -6,8 +6,10 @@ from preact_resnet import *
 from resnet import *
 
 
-@dataclass
 class MultiTrainSaveModelCallback(SaveModelCallback):
+    def __init__(self, learn, monitor, mode, name):
+        super().__init__(learn=learn, monitor=monitor, mode=mode, name=name)
+
     def on_train_begin(self, **kwargs):
         if os.path.isfile(self.get_metric_file_path()):
             with open(self.get_metric_file_path(), 'r') as metric_file:
@@ -25,8 +27,10 @@ class MultiTrainSaveModelCallback(SaveModelCallback):
         return self.learn.path / f'{self.learn.model_dir}/{self.name}_best_{self.monitor}.txt'
 
 
-@dataclass
 class MultiTrainEarlyStoppingCallback(EarlyStoppingCallback):
+    def __init__(self, learn, monitor, mode, patience, min_delta):
+        super().__init__(learn=learn, monitor=monitor, mode=mode, patience=patience, min_delta=min_delta)
+
     def on_train_begin(self, **kwargs):
         old_best = self.best if hasattr(self, 'best') else None
         super().on_train_begin(**kwargs)
