@@ -79,7 +79,7 @@ def create_data(batch_size, tfms_enabled):
             .from_folder('/kaggle/input/stanford-dog-breeds/stanford-dog-breeds')
             .random_split_by_pct(valid_pct=0.2, seed=42)
             .label_from_folder()
-            .transform(get_transforms() if tfms_enabled else None)
+            .transform(get_transforms() if tfms_enabled else None, size=224, resize_method=ResizeMethod.SQUISH)
             #.add_test_folder('test')
             .databunch(bs=batch_size)
     )
