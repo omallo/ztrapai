@@ -76,11 +76,11 @@ def resnet_split(model):
 def create_data(batch_size, tfms_enabled):
     return (
         ImageItemList
-            .from_folder(untar_data('https://s3.amazonaws.com/fast-ai-imageclas/cifar100'))
+            .from_folder('../input/stanford-dog-breeds/stanford-dog-breeds')
             .random_split_by_pct(valid_pct=0.2, seed=42)
             .label_from_folder()
             .transform(get_transforms() if tfms_enabled else None)
-            .add_test_folder('test')
+            #.add_test_folder('test')
             .databunch(bs=batch_size)
     )
 
@@ -249,12 +249,12 @@ def train(hyperparams):
 
 
 def main():
-    if os.path.isdir('/storage/models/ztrapai/cifar10/models'):
+    if os.path.isdir('/storage/models/ztrapai/dogbreeds/models'):
         log('restoring models')
-        shutil.copytree('/storage/models/ztrapai/cifar10/models', '/artifacts/models')
+        shutil.copytree('/storage/models/ztrapai/dogbreeds/models', '/artifacts/models')
 
     hyperspace = {
-        'model': hp.choice('model', ('preact_resnet18',)),
+        'model': hp.choice('model', ('resnet34',)),
         'dropout': hp.quniform('dropout', .5, 8.5, 1) / 10,
         'loss': hp.choice('loss', (
             {
@@ -291,9 +291,9 @@ def main():
     }
 
     trials = Trials()
-    if False and os.path.isfile('/storage/models/ztrapai/cifar10/trials.p'):
+    if False and os.path.isfile('/storage/models/ztrapai/dogbreeds/trials.p'):
         log('restoring persisted trials')
-        shutil.copy('/storage/models/ztrapai/cifar10/trials.p', '/artifacts/trials.p')
+        shutil.copy('/storage/models/ztrapai/dogbreeds/trials.p', '/artifacts/trials.p')
         with open('/artifacts/trials.p', 'rb') as trials_file:
             trials = pickle.load(trials_file)
 
